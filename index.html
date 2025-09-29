@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>豆包 AI 绘画 Demo</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;margin:0;padding:2rem;background:#f5f5f5;color:#333}
+    h1{margin-top:0}
+    textarea{width:100%;min-height:80px;font-size:1rem;padding:.5rem;resize:vertical}
+    button{padding:.6rem 1.2rem;font-size:1rem;border:none;background:#007bff;color:#fff;border-radius:4px;cursor:pointer}
+    button:disabled{background:#aaa;cursor:not-allowed}
+    .img-box{margin-top:1rem}
+    .img-box img{max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .error{color:#e00}
+  </style>
+</head>
+<body>
+  <h1>豆包 AI 绘画（本地版）</h1>
+
+  <label for="prompt">提示词（Prompt）：</label>
+  <textarea id="prompt" placeholder="鱼眼镜头，一只猫咪的头部，画面呈现出猫咪的五官因为拍摄方式扭曲的效果。"></textarea>
+
+  <br/><br/>
+  <button id="btn" onclick="generate()">立即生成</button>
+
+  <div class="img-box" id="box"></div>
+
+  <script>
+    // 1. 把真实 key 填进来
+    const ARK_API_KEY = 'c3b59469-cc6e-428d-8c2b-b2a75aa986bf';
+
+    async function generate() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return alert('请先输入提示词');
+
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      btn.textContent = '生成中…';
+      document.getElementById('box').innerHTML = '';
+
+      const payload = {
+        model: "doubao-seedream-3-0-t2i-250415",
+        prompt: prompt,
+        response_format: "url",
+        size: "1024x1024",
+        guidance_scale: 3,
+        watermark: true
+      };
+
+      try {
+        const res = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ARK_API_KEY}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`HTTP ${res.status}  ${txt}`);
+        }
+
+        const json = await res.json();
+        // 豆包返回格式和 OpenAI 兼容：data[0].url
+        const url = json.data?.[0]?.url;
+        if (!url) throw new Error('接口未返回图片 URL');
+
+        document.getElementById('box').innerHTML =
+          `<img src="${url}" alt="生成结果" />`;
+      } catch (err) {
+        document.getElementById('box').innerHTML =
+          `<p class="error">生成失败：${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '立即生成';
+      }
+    }
+  </script>
+</body>
+</html>
